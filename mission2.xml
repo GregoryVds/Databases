@@ -1,0 +1,262 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<submission>
+  <student>
+    <name>Gregory Vander Schueren</name>
+    <noma>2187-08-00</noma>
+    <email>gregory.vanderschueren@student.uclouvain.be</email>
+  </student>
+  <answers>
+
+    <!-- STRAIGHTFORWARD PUZZLES -->
+    <puzzle id="S1">
+      <answer language="tutorial-d"><![CDATA[
+        PARTS
+      ]]></answer>
+
+      <answer language="sql"><![CDATA[
+        SELECT pid FROM parts
+      ]]></answer>
+    </puzzle>
+
+    <puzzle id="S2">
+      <answer language="tutorial-d"><![CDATA[
+        PARTS {PID, NAME}
+      ]]></answer>
+    </puzzle>
+
+    <puzzle id="S3">
+      <answer language="tutorial-d"><![CDATA[
+        PARTS {ALL BUT WEIGHT}
+      ]]></answer>
+    </puzzle>
+
+    <puzzle id="S4">
+      <answer language="tutorial-d"><![CDATA[
+        PARTS {CITY}
+      ]]></answer>
+    </puzzle>
+
+    <puzzle id="S5">
+      <answer language="tutorial-d"><![CDATA[
+        PARTS  WHERE WEIGHT > 14.0 AND WEIGHT < 17.0
+      ]]></answer>
+    </puzzle>
+
+    <puzzle id="S6">
+      <answer language="tutorial-d"><![CDATA[
+        PARTS  WHERE CITY="London" OR CITY="Paris"
+      ]]></answer>
+    </puzzle>
+
+    <puzzle id="S7">
+      <answer language="tutorial-d"><![CDATA[
+        PARTS  WHERE CITY<>"London" AND CITY<>"Paris"
+      ]]></answer>
+    </puzzle>
+
+    <puzzle id="S8">
+      <answer language="tutorial-d"><![CDATA[
+        (PARTS WHERE CITY="London") {PID}
+      ]]></answer>
+    </puzzle>
+
+    <!-- EASY PUZZLES -->
+    <puzzle id="E1">
+      <answer language="tutorial-d"><![CDATA[
+        (SHIPMENTS WHERE SID=S#("S2")) {PID}
+      ]]></answer>
+    </puzzle>
+
+    <puzzle id="E2">
+      <answer language="tutorial-d"><![CDATA[
+        EXTEND TABLE_DEE: {C:=COUNT(SUPPLIERS)}
+      ]]></answer>
+    </puzzle>
+
+    <puzzle id="E3">
+      <answer language="tutorial-d"><![CDATA[
+        EXTEND TABLE_DEE : {C:=SUM(SHIPMENTS WHERE SID=S#("S3"), QTY)}
+      ]]></answer>
+    </puzzle>
+
+    <puzzle id="E4">
+      <answer language="tutorial-d"><![CDATA[
+        PARTS MATCHING SHIPMENTS
+      ]]></answer>
+    </puzzle>
+
+    <puzzle id="E5">
+      <answer language="tutorial-d"><![CDATA[
+        PARTS NOT MATCHING SHIPMENTS
+      ]]></answer>
+    </puzzle>
+
+    <puzzle id="E6">
+      <answer language="tutorial-d"><![CDATA[
+        JOIN {SHIPMENTS, PARTS RENAME {NAME AS PNAME, WEIGHT AS PWEIGHT}, SUPPLIERS RENAME {NAME AS SNAME, CITY AS SLOC}}{ALL BUT COLOR, CITY, SNAME, STATUS}
+      ]]></answer>
+    </puzzle>
+
+    <!-- MEDIUM PUZZLES -->
+    <puzzle id="M1">
+      <answer language="tutorial-d"><![CDATA[
+        WITH ( ship_and_total_weights :=
+            EXTEND (SHIPMENTS JOIN PARTS WHERE SID=S#("S1")) : {TOTAL_WEIGHT := WEIGHT * QTY}
+        ) : EXTEND TABLE_DEE : {TOTAL:=SUM(ship_and_total_weights,TOTAL_WEIGHT)}
+      ]]></answer>
+    </puzzle>
+
+    <puzzle id="M2">
+      <answer language="tutorial-d"><![CDATA[
+        (SHIPMENTS MATCHING (SUPPLIERS WHERE STATUS >= 20)){PID}
+      ]]></answer>
+    </puzzle>
+
+    <puzzle id="M3">
+      <answer language="tutorial-d"><![CDATA[
+        (JOIN {PARTS, SHIPMENTS {ALL BUT QTY}, SHIPMENTS RENAME {SID AS SID2}} WHERE SID<>SID2){ALL BUT SID, SID2, QTY}
+      ]]></answer>
+    </puzzle>
+
+    <puzzle id="M4">
+      <answer language="tutorial-d"><![CDATA[
+          WITH (
+            first_supplier := SUPPLIERS WHERE NAME=MIN(SUPPLIERS, NAME)
+          ) : (SHIPMENTS MATCHING first_supplier){PID}
+      ]]></answer>
+    </puzzle>
+
+    <puzzle id="M5">
+      <answer language="tutorial-d"><![CDATA[
+          WITH (
+            active_suppliers := (SUMMARIZE (EXTEND SHIPMENTS JOIN PARTS : {TOTAL_WEIGHT := QTY*WEIGHT}) BY {SID} : {TOTAL:=SUM(TOTAL_WEIGHT)})
+          ) : active_suppliers UNION EXTEND (SUPPLIERS NOT MATCHING active_suppliers){SID} : {TOTAL := 0.0}
+      ]]></answer>
+    </puzzle>
+
+    <puzzle id="M6">
+      <answer language="tutorial-d"><![CDATA[
+        (PARTS WHERE WEIGHT=MAX (PARTS, WEIGHT)){PID}
+      ]]></answer>
+    </puzzle>
+
+    <!-- DIFFICULT PUZZLES -->
+    <puzzle id="D1">
+      <answer language="tutorial-d"><![CDATA[
+          WITH (
+            concerned_suppliers := SUPPLIERS WHERE STATUS <= 20,
+            supplied_parts := JOIN {PARTS, SHIPMENTS, concerned_suppliers RENAME {NAME AS SNAME, CITY AS SCITY} }
+          ) : PARTS NOT MATCHING supplied_parts
+      ]]></answer>
+    </puzzle>
+
+    <!-- RETURN ALL PARTS IF NO SUPPLIERS -->
+    <puzzle id="D2">
+      <answer language="tutorial-d"><![CDATA[
+          WITH (
+            supplied_parts := SUMMARIZE SHIPMENTS{ALL BUT QTY} BY {PID} : {SUPPLIERS_COUNT := COUNT()},
+            unsupplied_parts := EXTEND (PARTS{PID} NOT MATCHING supplied_parts) : {SUPPLIERS_COUNT := 0},
+            all_parts := supplied_parts UNION  unsupplied_parts
+          ) : (all_parts WHERE SUPPLIERS_COUNT=COUNT(SUPPLIERS)){PID}
+      ]]></answer>
+    </puzzle>
+
+    <!-- RETURN NO PARTS IF NO SUPPLIERS -->
+    <puzzle id="D2">
+      <answer language="tutorial-d"><![CDATA[
+          WITH (
+            supplied_parts := SUMMARIZE SHIPMENTS{ALL BUT QTY} BY {PID} : {SUPPLIERS_COUNT := COUNT()}
+          ) : (supplied_parts WHERE SUPPLIERS_COUNT=COUNT(SUPPLIERS)){PID}
+      ]]></answer>
+    </puzzle>
+
+    <puzzle id="D3">
+      <answer language="tutorial-d"><![CDATA[
+          With (
+            s1 := (SUPPLIERS WHERE SID = S#("S1")){NAME} RENAME {NAME AS TARGET_NAME},
+            suppliers_with_name := SUPPLIERS JOIN s1
+          ) : suppliers_with_name WHERE NAME < TARGET_NAME
+      ]]></answer>
+    </puzzle>
+
+    <puzzle id="D4">
+      <answer language="tutorial-d"><![CDATA[
+          WITH (
+            parts := (PARTS RENAME {CITY AS PCITY}){PID, PCITY},
+            suppliers := (SUPPLIERS RENAME {CITY AS SCITY}){SID, SCITY},
+            cartesian_prod := suppliers JOIN parts
+          ) : cartesian_prod WHERE SCITY<>PCITY
+      ]]></answer>
+    </puzzle>
+
+    <puzzle id="D5">
+      <answer language="tutorial-d"><![CDATA[
+          WITH (
+            cities := SUPPLIERS{CITY} UNION PARTS{CITY},
+            parts_by_city := SUMMARIZE PARTS BY {CITY} : {PS := COUNT()},
+            suppliers_by_city := SUMMARIZE SUPPLIERS BY {CITY} : {SS := COUNT()},
+            shipments_by_city := SUMMARIZE EXTEND JOIN{SHIPMENTS, SUPPLIERS, PARTS{PID, WEIGHT}} : {TOTAL_WEIGHT := WEIGHT * QTY} BY {CITY} : {TOTAL:=SUM(TOTAL_WEIGHT)},
+            parts_complete := parts_by_city UNION EXTEND (cities NOT MATCHING parts_by_city) : {PS := 0},
+            suppliers_complete := suppliers_by_city UNION EXTEND (cities NOT MATCHING suppliers_by_city) : {SS := 0},
+            shipments_complete := shipments_by_city UNION EXTEND (cities NOT MATCHING shipments_by_city) : {TOTAL := 0}
+          ) : JOIN{cities, parts_complete,  suppliers_complete, shipments_complete}
+      ]]></answer>
+    </puzzle>
+
+    <puzzle id="D6">
+      <answer language="tutorial-d"><![CDATA[
+          PARTS WHERE PID = MAX(PARTS WHERE WEIGHT = MIN(PARTS, WEIGHT), PID)
+      ]]></answer>
+    </puzzle>
+
+    <!-- HARD PUZZLES -->
+
+    <puzzle id="H1">
+      <answer language="tutorial-d"><![CDATA[
+          WITH (
+            cities_with_sup_and_parts := SUPPLIERS{CITY} JOIN PARTS{CITY},
+            avg_weight := SUMMARIZE (PARTS MATCHING cities_with_sup_and_parts) BY {CITY} : {AVG_WEIGHT := AVG(WEIGHT)}
+          ) : avg_weight
+      ]]></answer>
+    </puzzle>
+
+    <puzzle id="H2">
+      <answer language="tutorial-d"><![CDATA[
+          WITH (
+            valid_shipments := SHIPMENTS{ALL BUT QTY} JOIN SUPPLIERS WHERE STATUS<=20,
+            valid_suppliers_count_by_parts := SUMMARIZE valid_shipments BY {PID} : {SUPPLIERS_COUNT := COUNT()}
+          ) : (valid_suppliers_count_by_parts WHERE SUPPLIERS_COUNT = COUNT(SUPPLIERS WHERE STATUS<=20)){PID}
+      ]]></answer>
+    </puzzle>
+
+    <!-- WTF? JOIN BEHAVES WEIRDLY -->
+    <puzzle id="H3">
+      <answer language="tutorial-d"><![CDATA[
+          WITH (
+            pid_suppliers_set := SHIPMENTS{PID, SID} GROUP {SID} AS SUPPLIERS_SET,
+            pairs := pid_suppliers_set RENAME {PID AS PX} JOIN pid_suppliers_set RENAME {PID AS PY}
+          ) :  pid_suppliers_set
+      ]]></answer>
+    </puzzle>
+
+    <puzzle id="H4">
+      <answer language="tutorial-d"><![CDATA[
+          (PARTS{PID, CITY} RENAME {PID AS P} JOIN PARTS{PID, CITY} RENAME {PID AS Q} WHERE P<>Q){ALL BUT CITY}
+      ]]></answer>
+    </puzzle>
+
+    <puzzle id="H5">
+      <answer language="tutorial-d"><![CDATA[
+          WITH (
+            suppliers_and_qty := SUMMARIZE SHIPMENTS BY {SID} : {TOTAL_QTY := SUM(QTY)},
+            top_1 := suppliers_and_qty WHERE TOTAL_QTY = MAX(suppliers_and_qty, TOTAL_QTY),
+            top_2 := suppliers_and_qty WHERE TOTAL_QTY = MAX(suppliers_and_qty NOT MATCHING top_1, TOTAL_QTY),
+            top_3 := suppliers_and_qty WHERE TOTAL_QTY = MAX(suppliers_and_qty NOT MATCHING (top_1 UNION top_2), TOTAL_QTY),
+            top := UNION{top_1, top_2, top_3}{SID},
+            suppliers_totals := SUMMARIZE (EXTEND JOIN{SHIPMENTS, PARTS} : {TOTAL_WEIGHT := WEIGHT * QTY}) BY {SID} : {TOTAL := SUM(TOTAL_WEIGHT)}
+           ) : top JOIN suppliers_totals
+      ]]></answer>
+    </puzzle>
+
+  </answers>
+</submission>
