@@ -155,9 +155,9 @@
     <!-- MEDIUM PUZZLES -->
     <puzzle id="M1">
       <answer language="tutorial-d"><![CDATA[
-        WITH ( ship_and_total_weights :=
-            EXTEND (SHIPMENTS JOIN PARTS WHERE SID=S#("S1")) : {TOTAL_WEIGHT := WEIGHT * QTY}
-        ) : EXTEND TABLE_DEE : {TOTAL:=SUM(ship_and_total_weights,TOTAL_WEIGHT)}
+          WITH ( ship_and_total_weights :=
+                      EXTEND (SHIPMENTS JOIN PARTS WHERE SID=S#("S1")) : {TOTAL_WEIGHT := OP_TIMES(QTY, WEIGHT)}
+                  ) : EXTEND TABLE_DEE : {TOTAL:=SUM(ship_and_total_weights,TOTAL_WEIGHT)}
       ]]></answer>
 
       <answer language="sql"><![CDATA[
@@ -248,19 +248,19 @@
     <puzzle id="D1">
       <answer language="tutorial-d"><![CDATA[
           WITH (
-            concerned_suppliers := SUPPLIERS WHERE STATUS <= 20,
-            supplied_parts := JOIN {PARTS, SHIPMENTS, concerned_suppliers RENAME {NAME AS SNAME, CITY AS SCITY} }
-          ) : PARTS NOT MATCHING supplied_parts
+             concerned_suppliers := SUPPLIERS WHERE STATUS <= 20,
+             supplied_parts := JOIN {PARTS, SHIPMENTS, concerned_suppliers RENAME {NAME AS SNAME, CITY AS SCITY} }
+           ) : (PARTS NOT MATCHING supplied_parts){PID,NAME}
       ]]></answer>
 
       <answer language="sql"><![CDATA[
-        SELECT pid
-        FROM parts
-        WHERE pid NOT IN
-        		(SELECT DISTINCT pid
-        		 FROM shipments
-        		 NATURAL JOIN suppliers
-        		 WHERE status <= 20);
+          SELECT pid, name
+              FROM parts
+              WHERE pid NOT IN
+              		(SELECT DISTINCT pid
+              		 FROM shipments
+              		 NATURAL JOIN suppliers
+              		 WHERE status <= 20);
       ]]></answer>
     </puzzle>
 
@@ -287,9 +287,9 @@
     <puzzle id="D3">
       <answer language="tutorial-d"><![CDATA[
           WITH (
-            s1 := (SUPPLIERS WHERE SID = S#("S1")){NAME} RENAME {NAME AS TARGET_NAME},
-            suppliers_with_name := SUPPLIERS JOIN s1
-          ) : suppliers_with_name WHERE NAME < TARGET_NAME
+                s1 := (SUPPLIERS WHERE SID = S#("S1")){NAME} RENAME {NAME AS TARGET_NAME},
+                suppliers_with_name := SUPPLIERS JOIN s1
+              ) : (suppliers_with_name WHERE NAME < TARGET_NAME){ALL BUT TARGET_NAME}
       ]]></answer>
 
       <answer language="sql"><![CDATA[
@@ -313,43 +313,43 @@
       <answer language="sql"><![CDATA[
           SELECT DISTINCT s.sid, p.pid
           FROM suppliers AS s, parts AS p
-          WHERE s.city != p.city
+          WHERE s.city != p.city;
       ]]></answer>
     </puzzle>
 
     <puzzle id="D5">
       <answer language="tutorial-d"><![CDATA[
           WITH (
-            cities := SUPPLIERS{CITY} UNION PARTS{CITY},
-            parts_by_city := SUMMARIZE PARTS BY {CITY} : {PS := COUNT()},
-            suppliers_by_city := SUMMARIZE SUPPLIERS BY {CITY} : {SS := COUNT()},
-            shipments_by_city := SUMMARIZE EXTEND JOIN{SHIPMENTS, SUPPLIERS, PARTS{PID, WEIGHT}} : {TOTAL_WEIGHT := WEIGHT * QTY} BY {CITY} : {TOTAL:=SUM(TOTAL_WEIGHT)},
-            parts_complete := parts_by_city UNION EXTEND (cities NOT MATCHING parts_by_city) : {PS := 0},
-            suppliers_complete := suppliers_by_city UNION EXTEND (cities NOT MATCHING suppliers_by_city) : {SS := 0},
-            shipments_complete := shipments_by_city UNION EXTEND (cities NOT MATCHING shipments_by_city) : {TOTAL := 0}
-          ) : JOIN{cities, parts_complete,  suppliers_complete, shipments_complete}
+                cities := SUPPLIERS{CITY} UNION PARTS{CITY},
+                parts_by_city := SUMMARIZE PARTS BY {CITY} : {PS := COUNT()},
+                suppliers_by_city := SUMMARIZE SUPPLIERS BY {CITY} : {SS := COUNT()},
+                shipments_by_city := SUMMARIZE EXTEND JOIN{SHIPMENTS, SUPPLIERS, PARTS{PID, WEIGHT}} : {TOTAL_WEIGHT := OP_TIMES(WEIGHT, QTY)} BY {CITY} : {TOTAL:=SUM(TOTAL_WEIGHT)},
+                parts_complete := parts_by_city UNION EXTEND (cities NOT MATCHING parts_by_city) : {PS := 0},
+                suppliers_complete := suppliers_by_city UNION EXTEND (cities NOT MATCHING suppliers_by_city) : {SS := 0},
+                shipments_complete := shipments_by_city UNION EXTEND (cities NOT MATCHING shipments_by_city) : {TOTAL := 0.0}
+              ) : JOIN{cities, parts_complete,  suppliers_complete, shipments_complete}
       ]]></answer>
 
       <answer language="sql"><![CDATA[
-          SELECT cities.city, COALESCE(ps, 0) AS ps, COALESCE(ss, 0) AS ss, COALESCE(total, 0)
-          FROM (SELECT city FROM suppliers UNION SELECT city FROM parts) AS cities
-          LEFT JOIN (SELECT city, COUNT(*) as ps
-          	   FROM parts
-          	   GROUP BY city) AS q1 ON cities.city = q1.city
-          LEFT JOIN (SELECT city, COUNT(*) as ss
-          	   FROM suppliers
-          	   GROUP BY city) AS q2 ON cities.city = q2.city
-          LEFT JOIN (SELECT supplier_city, SUM(weight*qty) AS total
-          	   FROM parts
-          	   NATURAL JOIN shipments
-          	   NATURAL JOIN (SELECT sid, city AS supplier_city FROM suppliers) AS Q1
-          	   GROUP BY supplier_city) AS q3 ON cities.city = q3.supplier_city
+          SELECT cities.city, COALESCE(ps, 0) AS ps, COALESCE(ss, 0) AS ss, COALESCE(total, 0) AS total
+           FROM (SELECT city FROM suppliers UNION SELECT city FROM parts) AS cities
+           LEFT JOIN (SELECT city, COUNT(*) as ps
+           	   FROM parts
+           	   GROUP BY city) AS q1 ON cities.city = q1.city
+           LEFT JOIN (SELECT city, COUNT(*) as ss
+           	   FROM suppliers
+           	   GROUP BY city) AS q2 ON cities.city = q2.city
+           LEFT JOIN (SELECT supplier_city, SUM(weight*qty) AS total
+           	   FROM parts
+           	   NATURAL JOIN shipments
+           	   NATURAL JOIN (SELECT sid, city AS supplier_city FROM suppliers) AS Q1
+           	   GROUP BY supplier_city) AS q3 ON cities.city = q3.supplier_city;
       ]]></answer>
     </puzzle>
 
     <puzzle id="D6">
       <answer language="tutorial-d"><![CDATA[
-          PARTS WHERE PID = MAX(PARTS WHERE WEIGHT = MIN(PARTS, WEIGHT), PID)
+          (PARTS WHERE PID = MAX(PARTS WHERE WEIGHT = MIN(PARTS, WEIGHT), PID)){PID}
       ]]></answer>
 
       <answer language="sql"><![CDATA[
@@ -358,7 +358,7 @@
           WHERE pid = (SELECT MAX(pid)
           	     FROM (SELECT pid
           		  FROM parts
-          		  WHERE weight = (SELECT MIN(weight) FROM parts)) AS q1)
+          		  WHERE weight = (SELECT MIN(weight) FROM parts)) AS q1);
       ]]></answer>
     </puzzle>
 
@@ -378,7 +378,7 @@
                 FROM suppliers) AS q1
           NATURAL JOIN (SELECT city, AVG(weight) AS avg_weight
         	      FROM parts
-        	      GROUP BY city) AS q2
+        	      GROUP BY city) AS q2;
       ]]></answer>
     </puzzle>
 
@@ -400,7 +400,7 @@
           GROUP BY pid
           HAVING COUNT(*) =  (SELECT COUNT(*)
           		              FROM suppliers
-          		              WHERE status <= 20)
+          		              WHERE status <= 20);
       ]]></answer>
     </puzzle>
 
@@ -419,8 +419,22 @@
           WITH (
             pid_suppliers_set := SHIPMENTS{PID, SID} GROUP {SID} AS SUPPLIERS_SET,
             pairs := pid_suppliers_set RENAME {PID AS PX} JOIN pid_suppliers_set RENAME {SUPPLIERS_SET AS SUPPLIERS_SET2, PID AS PY}
-          ) :  pairs WHERE SUPPLIERS_SET = SUPPLIERS_SET2 AND PX<>PY
+          ) :  (pairs WHERE SUPPLIERS_SET = SUPPLIERS_SET2 AND PX<>PY){PX,PY}
+      ]]></answer>
 
+      <answer language="sql"><![CDATA[
+          WITH pid_sid_pairs AS    (SELECT pid, sid
+                        			FROM parts
+                        			NATURAL JOIN shipments),
+             common_suppliers_count AS  (SELECT p1.pid AS px, p2.pid AS py, count(p1.pid)
+                        				 FROM pid_sid_pairs AS p1
+                        				 JOIN pid_sid_pairs AS p2 ON p1.sid = p2.sid
+                        				 WHERE p1.pid != p2.pid
+                        				 GROUP BY p1.pid, p2.pid)
+        SELECT csc.px, csc.py
+        FROM common_suppliers_count AS csc
+        WHERE count = (SELECT COUNT(DISTINCT sid) FROM shipments AS s WHERE s.pid = csc.px)
+        AND   count = (SELECT COUNT(DISTINCT sid) FROM shipments AS s WHERE s.pid = csc.py)
       ]]></answer>
     </puzzle>
 
@@ -430,24 +444,24 @@
       ]]></answer>
 
       <answer language="sql"><![CDATA[
-          SELECT DISTINCT parts.pid, parts2.pid
+          SELECT DISTINCT parts.pid AS p, parts2.pid AS q
           FROM parts, parts AS parts2
-          WHERE parts.city = parts2.city AND parts.pid != parts2.pid
+          WHERE parts.city = parts2.city AND parts.pid != parts2.pid;
       ]]></answer>
     </puzzle>
 
     <puzzle id="H5">
       <answer language="tutorial-d"><![CDATA[
           WITH (
-            shipments_with_weights := EXTEND SHIPMENTS JOIN PARTS: {TOTAL_WEIGHT := WEIGHT * QTY},
-            summarized_by_supplier := SUMMARIZE shipments_with_weights BY {SID} : {TOTAL_QTY := SUM(QTY), TOTAL_WEIGHT := SUM(TOTAL_WEIGHT)},
+            shipments_with_weights := EXTEND SHIPMENTS JOIN PARTS: {TOTAL_WEIGHT := OP_TIMES(QTY, WEIGHT)},
+            summarized_by_supplier := SUMMARIZE shipments_with_weights BY {SID} : {TOTAL_QTY := SUM(QTY), TOTAL := SUM(TOTAL_WEIGHT)},
             with_others := (EXTEND summarized_by_supplier : {OTHERS := summarized_by_supplier}) RENAME {TOTAL_QTY AS QTY},
             with_higher_qty_count := EXTEND with_others : {HIGHER_COUNT := Count(OTHERS WHERE TOTAL_QTY >= QTY)}
-          ) : (with_higher_qty_count WHERE HIGHER_COUNT <= 3){SID, TOTAL_WEIGHT}
+          ) : (with_higher_qty_count WHERE HIGHER_COUNT <= 3){SID, TOTAL}
       ]]></answer>
 
       <answer language="sql"><![CDATA[
-          SELECT sid, SUM(qty*weight) AS total_weight
+          SELECT sid, SUM(qty*weight) AS total
           FROM shipments
           NATURAL JOIN parts
           GROUP BY sid
@@ -457,7 +471,7 @@
                       			   NATURAL JOIN parts
                       			   GROUP BY sid
                       			   ORDER BY total_quantity DESC
-                      			   LIMIT 3) as q1)
+                      			   LIMIT 3) as q1);
       ]]></answer>
     </puzzle>
 
